@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+import gdown
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from tensorflow.keras.applications.efficientnet import preprocess_input
@@ -11,6 +12,13 @@ CORS(app)
 
 print(f"Loading best_model.h5 on TF {tf.__version__}")
 try:
+    if not os.path.exists("best_model.h5"):
+        print("Model file not found. Downloading from Google Drive...")
+        # The ID from the user's gdrive link
+        file_id = '1zr4WDRH_1PcLLVhViLxpa-9a1zm_T11F'
+        gdown.download(f'https://drive.google.com/uc?id={file_id}', 'best_model.h5', quiet=False)
+        print("Download complete.")
+
     # Now that we downgraded TF/Keras to 2.15, the original .h5 will load perfectly
     model = tf.keras.models.load_model("best_model.h5", compile=False)
     print("Model loaded successfully.")
@@ -103,4 +111,3 @@ def health_check():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-
