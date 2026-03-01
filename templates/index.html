@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Skin Cancer Detection</title>
+    <meta name="description"
+        content="AI-powered skin cancer detection using Deep Learning. Upload your dermoscopy image for instant analysis.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-canvas">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="nav-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M9 3H5C3.89543 3 3 3.89543 3 5V9M9 3H15M9 3V9M15 3H19C20.1046 3 21 3.89543 21 5V9M15 3V9M21 9V15M21 15V19C21 20.1046 20.1046 21 19 21H15M21 15H15M3 9V15M3 15V19C3 20.1046 3.89543 21 5 21H9M3 15H9M9 21H15M9 21V15M15 21V15M9 15H15M9 15V9M15 9H9"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+            <span>DermAI</span>
+        </div>
+        <div class="nav-badge">Beta</div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-tag">
+                <span class="pulse-dot"></span>
+                AI-Powered Analysis
+            </div>
+            <h1>Skin Cancer <span class="gradient-text">Detection</span></h1>
+            <p class="hero-subtitle">Upload a dermoscopy image and get an instant deep-learning diagnosis powered by
+                EfficientNet-B3.</p>
+        </div>
+
+        <!-- App Card -->
+        <div class="app-card glass-panel">
+
+            <!-- STEP 1: Upload Section -->
+            <section class="upload-section" id="upload-section">
+                <div class="step-label">
+                    <span class="step-num">1</span>
+                    <span>Select Image</span>
+                </div>
+                <div class="drop-zone" id="drop-zone">
+                    <input type="file" id="file-input" accept="image/jpeg, image/png, image/jpg" hidden>
+                    <div class="drop-content">
+                        <div class="upload-icon-wrap">
+                            <svg width="48" height="48" class="upload-icon" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M7 10V9C7 6.23858 9.23858 4 12 4C14.7614 4 17 6.23858 17 9V10C19.2091 10 21 11.7909 21 14C21 15.4806 20.1956 16.8084 19 17.5M7 10C4.79086 10 3 11.7909 3 14C3 15.4806 3.8044 16.8084 5 17.5M12 12V21M12 12L15 15M12 12L9 15"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <p class="drop-title">Drag & drop your skin image</p>
+                        <p class="drop-subtitle">or <span class="browse-link">click to browse</span></p>
+                        <div class="file-types">
+                            <span>JPG</span>
+                            <span>PNG</span>
+                            <span>JPEG</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="disclaimer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <span>For educational purposes only. Always consult a licensed dermatologist.</span>
+                </div>
+            </section>
+
+            <!-- STEP 2: Preview Section -->
+            <section class="preview-section hidden" id="preview-section">
+                <div class="step-label">
+                    <span class="step-num">2</span>
+                    <span>Review & Analyze</span>
+                </div>
+                <div class="image-wrapper" id="image-wrapper">
+                    <img id="image-preview" src="" alt="Skin Image Preview">
+                    <div class="scan-line" id="scan-line"></div>
+                    <div class="image-overlay">
+                        <span id="filename-label" class="filename-label"></span>
+                    </div>
+                </div>
+                <div class="action-row">
+                    <button class="btn btn-secondary" id="cancel-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cancel
+                    </button>
+                    <button class="btn btn-primary" id="analyze-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                        </svg>
+                        Analyze Image
+                    </button>
+                </div>
+            </section>
+
+            <!-- STEP 3: Results Section -->
+            <section class="results-section hidden" id="results-section">
+                <div class="step-label">
+                    <span class="step-num">3</span>
+                    <span>Analysis Result</span>
+                </div>
+                <div class="result-card" id="result-card">
+                    <div class="result-header">
+                        <div class="result-icon" id="result-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 id="result-heading">Analyzing...</h2>
+                            <p id="result-description" class="result-desc"></p>
+                        </div>
+                    </div>
+
+                    <div class="confidence-container hidden" id="confidence-container">
+                        <div class="confidence-header">
+                            <span>Model Confidence</span>
+                            <span id="confidence-value" class="confidence-val">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-bar"></div>
+                        </div>
+                    </div>
+
+                    <div class="warning-box hidden" id="low-confidence-warning">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Low Confidence — The image may not be a clear medical sample. Please consult a medical
+                            professional.</span>
+                    </div>
+
+                    <button class="btn btn-outline full-width" id="reset-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Analyze Another Image
+                    </button>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with EfficientNet-B3 trained on HAM10000 dataset &middot; For educational use only</p>
+        </footer>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
