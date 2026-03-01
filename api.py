@@ -1,4 +1,5 @@
 import os
+import h5py
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -14,12 +15,38 @@ print(f"Loading best_model.h5 on TF {tf.__version__}")
 try:
     if not os.path.exists("best_model.h5"):
         print("Model file not found. Downloading from Google Drive...")
-        # The ID from the user's gdrive link
+        # The ID from your Google Drive link
         file_id = '1zr4WDRH_1PcLLVhViLxpa-9a1zm_T11F'
         gdown.download(f'https://drive.google.com/uc?id={file_id}', 'best_model.h5', quiet=False)
         print("Download complete.")
 
-    # Now that we downgraded TF/Keras to 2.15, the original .h5 will load perfectly
+        # FIX KERAS 3 METADATA FOR KERAS 2 COMPATIBILITY
+        print("Removing Keras 3 'batch_shape' to ensure Keras 2 compatibility...")
+        try:
+            with h5py.File('best_model.h5', 'r+') as f:
+                if 'model_config' in f.attrs:
+                    import json
+                    config_str = f.attrs.get('model_config')
+                    if isinstance(config_str, bytes):
+                        config_str = config_str.decode('utf-8')
+                    config = json.loads(config_str)
+                    
+                    changed = False
+                    if 'config' in config and 'layers' in config['config']:
+                        for layer in config['config']['layers']:
+                            if layer['class_name'] == 'InputLayer':
+                                if 'batch_shape' in layer['config']:
+                                    layer['config']['batch_input_shape'] = layer['config'].pop('batch_shape')
+                                    changed = True
+                    
+                    if changed:
+                        new_config_str = json.dumps(config)
+                        f.attrs.modify('model_config', new_config_str.encode('utf-8'))
+                        print("Successfully fixed model metadata.")
+        except Exception as e:
+            print(f"Error applying Keras 3 fix: {e}")
+
+    # Load the downloaded Keras 2 model
     model = tf.keras.models.load_model("best_model.h5", compile=False)
     print("Model loaded successfully.")
 except Exception as e:
