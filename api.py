@@ -9,7 +9,7 @@ from tensorflow.keras.applications.efficientnet import preprocess_input
 app = Flask(__name__)
 CORS(app)
 
-print(f"Loading best_model.h5 on TF {tf.__version__} (Keras {tf.keras.__version__})")
+print(f"Loading best_model.h5 on TF {tf.__version__}")
 try:
     # Now that we downgraded TF/Keras to 2.15, the original .h5 will load perfectly
     model = tf.keras.models.load_model("best_model.h5", compile=False)
@@ -103,3 +103,4 @@ def health_check():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
