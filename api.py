@@ -13,14 +13,19 @@ CORS(app)
 
 print("TensorFlow version:", tf.__version__)
 
-# Load full model (works in TF 2.10)
-try:
-    model = tf.keras.models.load_model("best_model.h5")
-    print("✓ Model loaded successfully")
-except Exception as e:
-    print("✗ Model loading failed:", e)
-    model = None
+model = None
 
+# ---- Safe load for old .h5 model in TF2.15+ ----
+try:
+    model = tf.keras.models.load_model(
+        "best_model.h5",
+        compile=False,
+        safe_mode=False
+    )
+    print("✅ Model loaded successfully!")
+except Exception as e:
+    print("❌ Model failed to load:", e)
+    model = None
 
 class_names = [
     "Actinic Keratosis",
@@ -37,7 +42,6 @@ cancer_classes = [0, 1, 4]
 
 @app.route("/predict", methods=["POST"])
 def predict():
-
     if model is None:
         return jsonify({"error": "Model not loaded"}), 500
 
@@ -48,13 +52,12 @@ def predict():
         file = request.files["file"]
         img = Image.open(file.stream).convert("RGB")
         img = img.resize((224, 224))
-
         arr = np.array(img)
+
         arr = preprocess_input(arr)
         arr = np.expand_dims(arr, axis=0)
 
         preds = model.predict(arr)[0]
-
         class_index = int(np.argmax(preds))
         confidence = float(np.max(preds)) * 100
 
@@ -71,10 +74,7 @@ def predict():
 
 @app.route("/health")
 def health():
-    return jsonify({
-        "status": "running",
-        "model_loaded": model is not None
-    })
+    return jsonify({"status": "running", "model_loaded": model is not None})
 
 
 if __name__ == "__main__":
