@@ -1,27 +1,26 @@
 import os
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.applications.efficientnet import preprocess_input
 
 app = Flask(__name__)
 CORS(app)
 
-print(f"Loading best_model.h5 on TF {tf.__version__}")
+print("TensorFlow version:", tf.__version__)
 
-# Load the model - Keras 3 should handle it natively
-model = None
+# Load full model (works in TF 2.10)
 try:
-    model = tf.keras.models.load_model("best_model.h5", compile=False)
-    print("✓ Model loaded successfully!")
+    model = tf.keras.models.load_model("best_model.h5")
+    print("✓ Model loaded successfully")
 except Exception as e:
-    print(f"✗ Model loading failed: {str(e)[:200]}")
-    print("Server will start but predictions will return errors.")
+    print("✗ Model loading failed:", e)
+    model = None
+
 
 class_names = [
     "Actinic Keratosis",
@@ -32,80 +31,52 @@ class_names = [
     "Melanocytic Nevus (Normal Skin)",
     "Vascular Lesion"
 ]
-cancer_classes = [0, 1, 4]  # AKIEC, BCC, MEL
 
-@app.route('/predict', methods=['POST'])
+cancer_classes = [0, 1, 4]
+
+
+@app.route("/predict", methods=["POST"])
 def predict():
+
     if model is None:
-        return jsonify({'error': 'Model not loaded on the server.'}), 500
+        return jsonify({"error": "Model not loaded"}), 500
 
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
 
     try:
-        # EXACT MATCH of new/app.py logic
-        img = Image.open(file.stream).convert('RGB')
-        
-        # Preprocess exactly as in app.py
-        img_resized = img.resize((224, 224))
-        arr = np.array(img_resized)
-        
-        # This was doing the critical magic in Keras 2
+        file = request.files["file"]
+        img = Image.open(file.stream).convert("RGB")
+        img = img.resize((224, 224))
+
+        arr = np.array(img)
         arr = preprocess_input(arr)
-        
         arr = np.expand_dims(arr, axis=0)
 
-        # Inference
-        pred = model.predict(arr, verbose=0)
-        pred_probs = pred[0]
+        preds = model.predict(arr)[0]
 
-        print("--- PREDICTION ---")
-        for name, prob in zip(class_names, pred_probs):
-            print(f"  {name}: {prob*100:.2f}%")
-
-        # Get highest prob
-        class_index = int(np.argmax(pred_probs))
-        confidence = float(np.max(pred_probs)) * 100
-        skin_type = class_names[class_index]
-        print(f"  Model chose: {skin_type} ({confidence:.2f}%)")
-
-        is_cancer = class_index in cancer_classes
-
-        # Do NOT force "cancer" if sum of background cancer probs > 2% 
-        # (That was the bug making everything cancer.)
-        # The user's code just checked cancer_prob for a warning
-        cancer_prob = sum(float(pred_probs[i]) for i in cancer_classes)
-        print(f"  Total Cancer probability sum: {cancer_prob*100:.2f}%")
+        class_index = int(np.argmax(preds))
+        confidence = float(np.max(preds)) * 100
 
         return jsonify({
-            'skin_type': skin_type,
-            'confidence': round(confidence, 2),
-            'is_cancer': is_cancer,
-            'class_index': class_index,
-            'low_confidence': confidence < 50
+            "skin_type": class_names[class_index],
+            "confidence": round(confidence, 2),
+            "is_cancer": class_index in cancer_classes,
+            "class_index": class_index
         })
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route('/', methods=['GET'])
-def index():
-    return render_template('index.html')
+@app.route("/health")
+def health():
+    return jsonify({
+        "status": "running",
+        "model_loaded": model is not None
+    })
 
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "running", "model_loaded": model is not None})
-
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
